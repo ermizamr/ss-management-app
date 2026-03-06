@@ -1,0 +1,9 @@
+# Admin Panel
+admin-panel/node_modules/
+admin-panel/dist/
+admin-panel/dist-ssr/
+
+# Admin Panel env files (keep admin-panel/.env.example)
+admin-panel/.env
+admin-panel/.env.local
+admin-panel/.env.*.local

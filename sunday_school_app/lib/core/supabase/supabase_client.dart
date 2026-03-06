@@ -24,4 +24,3 @@ class SupabaseClientManager {
     _initialized = true;
   }
 }
-

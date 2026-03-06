@@ -1,0 +1,9 @@
+@import './tailwind.css';
+@import './theme.css';
+
+/* App-level defaults */
+html,
+body,
+#root {
+  height: 100%;
+}

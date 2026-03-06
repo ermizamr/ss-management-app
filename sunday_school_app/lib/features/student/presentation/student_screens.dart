@@ -4,6 +4,60 @@ import 'package:go_router/go_router.dart';
 import 'package:supabase_flutter/supabase_flutter.dart';
 
 import '../../auth/data/auth_providers.dart';
+import '../../../core/dates/ethiopian_date_formatter.dart';
+import '../../../core/promotions/promotion_criteria_set.dart';
+
+class StudentShell extends StatelessWidget {
+  const StudentShell({super.key, required this.navigationShell});
+
+  final StatefulNavigationShell navigationShell;
+
+  void _onTap(BuildContext context, int index) {
+    navigationShell.goBranch(
+      index,
+      initialLocation: index == navigationShell.currentIndex,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: navigationShell,
+      bottomNavigationBar: BottomNavigationBar(
+        currentIndex: navigationShell.currentIndex,
+        onTap: (index) => _onTap(context, index),
+        type: BottomNavigationBarType.fixed,
+        backgroundColor: Colors.white,
+        selectedItemColor: const Color(0xFF0284C7), // sky-600
+        unselectedItemColor: const Color(0xFF64748B), // slate-500
+        selectedFontSize: 12,
+        unselectedFontSize: 12,
+        items: const [
+          BottomNavigationBarItem(
+            icon: Icon(Icons.home_rounded),
+            label: 'Home',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.calendar_month_rounded),
+            label: 'Attendance',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.auto_stories_rounded),
+            label: 'Grades',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.forum_rounded),
+            label: 'Communication',
+          ),
+          BottomNavigationBarItem(
+            icon: Icon(Icons.person_outline_rounded),
+            label: 'Profile',
+          ),
+        ],
+      ),
+    );
+  }
+}
 
 class StudentLoginScreen extends ConsumerStatefulWidget {
   const StudentLoginScreen({super.key});
@@ -237,20 +291,25 @@ class _StudentLoginScreenState extends ConsumerState<StudentLoginScreen> {
                                             width: 18,
                                             child: CircularProgressIndicator(
                                               strokeWidth: 2,
-                                              valueColor: AlwaysStoppedAnimation<Color>(
-                                                Colors.white,
-                                              ),
+                                              valueColor:
+                                                  AlwaysStoppedAnimation<Color>(
+                                                    Colors.white,
+                                                  ),
                                             ),
                                           )
                                         : const SizedBox.shrink(),
                                     label: Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
+                                      mainAxisAlignment:
+                                          MainAxisAlignment.center,
                                       mainAxisSize: MainAxisSize.min,
                                       children: [
                                         const Text('Login'),
                                         if (!_submitting) ...[
                                           const SizedBox(width: 8),
-                                          const Icon(Icons.arrow_forward_rounded, size: 20),
+                                          const Icon(
+                                            Icons.arrow_forward_rounded,
+                                            size: 20,
+                                          ),
                                         ],
                                       ],
                                     ),
@@ -330,11 +389,12 @@ class _IconTextField extends StatelessWidget {
       decoration: InputDecoration(
         hintText: hintText,
         isDense: true,
-        contentPadding: const EdgeInsets.symmetric(vertical: 12, horizontal: 14),
-        prefixIcon: Icon(icon, size: 20, color: const Color(0xFF9CA3AF)),
-        border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(14),
+        contentPadding: const EdgeInsets.symmetric(
+          vertical: 12,
+          horizontal: 14,
         ),
+        prefixIcon: Icon(icon, size: 20, color: const Color(0xFF9CA3AF)),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(14)),
         enabledBorder: OutlineInputBorder(
           borderRadius: BorderRadius.circular(14),
           borderSide: const BorderSide(
@@ -358,88 +418,431 @@ class StudentDashboardScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(
-        child: Text('Student Dashboard (to match Figma)'),
+    final user = Supabase.instance.client.auth.currentUser;
+    final displayName =
+        (user?.userMetadata?['name'] as String?) ?? user?.email ?? 'Student';
+
+    const attendancePercent = 85;
+    const academicAvg = 86;
+    const pendingQuestions = 1;
+    const openComplaints = 1;
+    final pendingTotal = pendingQuestions + openComplaints;
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Column(
+            children: [
+              Container(
+                width: double.infinity,
+                padding: const EdgeInsets.fromLTRB(24, 24, 24, 28),
+                decoration: const BoxDecoration(
+                  gradient: LinearGradient(
+                    begin: Alignment.centerLeft,
+                    end: Alignment.centerRight,
+                    colors: [
+                      Color(0xFF0284C7), // sky-600
+                      Color(0xFF0EA5E9), // sky-500
+                    ],
+                  ),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Welcome back,',
+                      style: TextStyle(
+                        fontSize: 22,
+                        color: Colors.white,
+                        fontWeight: FontWeight.w500,
+                      ),
+                    ),
+                    const SizedBox(height: 6),
+                    Text(
+                      displayName,
+                      style: const TextStyle(
+                        fontSize: 18,
+                        color: Color(0xFFBAE6FD), // sky-200
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Transform.translate(
+                offset: const Offset(0, -16),
+                child: Padding(
+                  padding: const EdgeInsets.symmetric(horizontal: 24),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _DashboardStatCard(
+                              iconBackground: const Color(0xFFE0F2FE),
+                              iconColor: const Color(0xFF0284C7),
+                              icon: Icons.calendar_month_rounded,
+                              value: '$attendancePercent%',
+                              label: 'Attendance',
+                            ),
+                          ),
+                          const SizedBox(width: 16),
+                          Expanded(
+                            child: _DashboardStatCard(
+                              iconBackground: const Color(0xFFFEF3C7),
+                              iconColor: const Color(0xFFD97706),
+                              icon: Icons.emoji_events_rounded,
+                              value: '$academicAvg%',
+                              label: 'Academic Avg',
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Communication overview
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(18),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x0F000000),
+                              blurRadius: 10,
+                              offset: Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
+                              decoration: const BoxDecoration(
+                                border: Border(
+                                  bottom: BorderSide(color: Color(0xFFF1F5F9)),
+                                ),
+                              ),
+                              child: Row(
+                                children: [
+                                  const Icon(
+                                    Icons.notifications_rounded,
+                                    size: 20,
+                                    color: Color(0xFF475569),
+                                  ),
+                                  const SizedBox(width: 8),
+                                  const Expanded(
+                                    child: Text(
+                                      'Communication',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.w600,
+                                        color: Color(0xFF0F172A),
+                                      ),
+                                    ),
+                                  ),
+                                  if (pendingTotal > 0)
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 10,
+                                        vertical: 6,
+                                      ),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFF0EA5E9),
+                                        borderRadius: BorderRadius.circular(
+                                          999,
+                                        ),
+                                      ),
+                                      child: Text(
+                                        '$pendingTotal pending',
+                                        style: const TextStyle(
+                                          fontSize: 11,
+                                          color: Colors.white,
+                                        ),
+                                      ),
+                                    ),
+                                ],
+                              ),
+                            ),
+                            Padding(
+                              padding: const EdgeInsets.all(16),
+                              child: Column(
+                                children: [
+                                  _KeyValueRow(
+                                    label: 'Pending Questions',
+                                    value: '$pendingQuestions',
+                                  ),
+                                  const SizedBox(height: 10),
+                                  _KeyValueRow(
+                                    label: 'Open Complaints',
+                                    value: '$openComplaints',
+                                  ),
+                                ],
+                              ),
+                            ),
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 16,
+                                vertical: 12,
+                              ),
+                              decoration: const BoxDecoration(
+                                color: Color(0xFFF8FAFC),
+                                borderRadius: BorderRadius.only(
+                                  bottomLeft: Radius.circular(18),
+                                  bottomRight: Radius.circular(18),
+                                ),
+                              ),
+                              child: Center(
+                                child: TextButton(
+                                  onPressed: () =>
+                                      context.go('/student/communication'),
+                                  style: TextButton.styleFrom(
+                                    foregroundColor: const Color(0xFF0EA5E9),
+                                  ),
+                                  child: const Text('Go to Communication'),
+                                ),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+
+                      // Quick actions
+                      Container(
+                        decoration: BoxDecoration(
+                          color: Colors.white,
+                          borderRadius: BorderRadius.circular(18),
+                          boxShadow: const [
+                            BoxShadow(
+                              color: Color(0x0F000000),
+                              blurRadius: 10,
+                              offset: Offset(0, 4),
+                            ),
+                          ],
+                        ),
+                        padding: const EdgeInsets.all(16),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'Quick Actions',
+                              style: TextStyle(
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF0F172A),
+                              ),
+                            ),
+                            const SizedBox(height: 12),
+                            Row(
+                              children: [
+                                Expanded(
+                                  child: _QuickActionTile(
+                                    icon: Icons.trending_up_rounded,
+                                    label: 'View Grades',
+                                    onTap: () => context.go('/student/grades'),
+                                  ),
+                                ),
+                                const SizedBox(width: 12),
+                                Expanded(
+                                  child: _QuickActionTile(
+                                    icon: Icons.calendar_month_rounded,
+                                    label: 'Attendance',
+                                    onTap: () =>
+                                        context.go('/student/attendance'),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
       ),
     );
   }
 }
 
-class StudentAttendanceScreen extends StatelessWidget {
+class StudentAttendanceScreen extends StatefulWidget {
   const StudentAttendanceScreen({super.key});
 
   @override
-  Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(
-        child: Text('Student Attendance'),
-      ),
-    );
-  }
+  State<StudentAttendanceScreen> createState() =>
+      _StudentAttendanceScreenState();
 }
 
-class StudentGradesScreen extends StatelessWidget {
-  const StudentGradesScreen({super.key});
+class _StudentAttendanceScreenState extends State<StudentAttendanceScreen> {
+  String _selectedSubjectId = _attendanceSubjects.first.id;
+
+  int _subjectPercentage(String subjectId) {
+    final records = _attendanceRecords
+        .where((r) => r.subjectId == subjectId)
+        .toList();
+    if (records.isEmpty) return 0;
+    final attended = records
+        .where((r) => r.status != _AttendanceStatus.absent)
+        .length;
+    return ((attended / records.length) * 100).round();
+  }
+
+  int _overallPercentage() {
+    if (_attendanceRecords.isEmpty) return 0;
+    final attended = _attendanceRecords
+        .where((r) => r.status != _AttendanceStatus.absent)
+        .length;
+    return ((attended / _attendanceRecords.length) * 100).round();
+  }
+
+  ({int present, int late, int absent, int total}) _statusStats(
+    String subjectId,
+  ) {
+    final records = _attendanceRecords
+        .where((r) => r.subjectId == subjectId)
+        .toList();
+    final present = records
+        .where((r) => r.status == _AttendanceStatus.present)
+        .length;
+    final late = records
+        .where((r) => r.status == _AttendanceStatus.late)
+        .length;
+    final absent = records
+        .where((r) => r.status == _AttendanceStatus.absent)
+        .length;
+    return (
+      present: present,
+      late: late,
+      absent: absent,
+      total: records.length,
+    );
+  }
+
+  String _formatDate(DateTime date) {
+    const weekdays = ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'];
+    final wd = weekdays[(date.weekday - 1).clamp(0, 6)];
+    return '$wd, ${EthiopianDateFormatter.formatDateTime(date)}';
+  }
+
+  ({String text, Color color, IconData icon}) _performance(int percentage) {
+    if (percentage >= 95) {
+      return (
+        text: 'Excellent attendance!',
+        color: const Color(0xFF16A34A),
+        icon: Icons.trending_up_rounded,
+      );
+    }
+    if (percentage >= 85) {
+      return (
+        text: 'Great attendance!',
+        color: const Color(0xFF16A34A),
+        icon: Icons.trending_up_rounded,
+      );
+    }
+    if (percentage >= 75) {
+      return (
+        text: 'Good attendance',
+        color: const Color(0xFFD97706),
+        icon: Icons.info_outline_rounded,
+      );
+    }
+    return (
+      text: 'Attendance needs improvement',
+      color: const Color(0xFFDC2626),
+      icon: Icons.info_outline_rounded,
+    );
+  }
 
   @override
   Widget build(BuildContext context) {
-    // Static demo data approximating the React mock data
-    final subjects = [
-      const _SubjectGrade(name: 'Bible Studies', average: 92),
-      const _SubjectGrade(name: 'Christian History', average: 84),
-      const _SubjectGrade(name: 'Memory Verses', average: 78),
-      const _SubjectGrade(name: 'Activities', average: 88),
-    ];
+    final overall = _overallPercentage();
+    final subject = _attendanceSubjects.firstWhere(
+      (s) => s.id == _selectedSubjectId,
+    );
+    final subjectPercentage = _subjectPercentage(_selectedSubjectId);
+    final stats = _statusStats(_selectedSubjectId);
+    final performance = _performance(subjectPercentage);
 
-    final overallAverage = 86;
+    final subjectRecords =
+        _attendanceRecords
+            .where((r) => r.subjectId == _selectedSubjectId)
+            .toList()
+          ..sort((a, b) => b.date.compareTo(a.date));
 
-    Color _gradeColor(int grade) {
-      if (grade >= 90) return const Color(0xFF16A34A); // green-600
-      if (grade >= 80) return const Color(0xFF0284C7); // sky-600
-      if (grade >= 70) return const Color(0xFFF59E0B); // amber-600
-      return const Color(0xFFDC2626); // red-600
+    Color percentageColor(int p) {
+      if (p >= 90) return const Color(0xFF16A34A);
+      if (p >= 75) return const Color(0xFFD97706);
+      return const Color(0xFFDC2626);
     }
 
-    Color _gradeBg(int grade) {
-      if (grade >= 90) return const Color(0xFFDCFCE7); // green-50
-      if (grade >= 80) return const Color(0xFFE0F2FE); // sky-50
-      if (grade >= 70) return const Color(0xFFFEF3C7); // amber-50
-      return const Color(0xFFFEE2E2); // red-50
-    }
-
-    Color _barColor(int grade) {
-      if (grade >= 90) return const Color(0xFF22C55E); // green-500
-      if (grade >= 80) return const Color(0xFF0EA5E9); // sky-500
-      if (grade >= 70) return const Color(0xFFFBBF24); // amber-500
-      return const Color(0xFFEF4444); // red-500
+    ({Color text, Color bg, Color border, IconData icon}) statusStyle(
+      _AttendanceStatus s,
+    ) {
+      switch (s) {
+        case _AttendanceStatus.present:
+          return (
+            text: const Color(0xFF16A34A),
+            bg: const Color(0xFFDCFCE7),
+            border: const Color(0xFFBBF7D0),
+            icon: Icons.check_circle_rounded,
+          );
+        case _AttendanceStatus.late:
+          return (
+            text: const Color(0xFFD97706),
+            bg: const Color(0xFFFEF3C7),
+            border: const Color(0xFFFDE68A),
+            icon: Icons.schedule_rounded,
+          );
+        case _AttendanceStatus.absent:
+          return (
+            text: const Color(0xFFDC2626),
+            bg: const Color(0xFFFEE2E2),
+            border: const Color(0xFFFECACA),
+            icon: Icons.cancel_rounded,
+          );
+      }
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC), // slate-50
+      backgroundColor: const Color(0xFFF8FAFC),
       body: SafeArea(
         child: Column(
           children: [
-            // Header
             Container(
-              padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+              width: double.infinity,
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 18),
               decoration: const BoxDecoration(
-                color: Colors.white,
-                border: Border(
-                  bottom: BorderSide(color: Color(0xFFE2E8F0)), // slate-200
+                gradient: LinearGradient(
+                  begin: Alignment.centerLeft,
+                  end: Alignment.centerRight,
+                  colors: [Color(0xFF0EA5E9), Color(0xFF0284C7)],
                 ),
               ),
-              width: double.infinity,
-              child: const Align(
-                alignment: Alignment.centerLeft,
-                child: Text(
-                  'Grades',
-                  style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.w600,
-                    color: Color(0xFF0F172A), // slate-900
+              child: const Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Attendance',
+                    style: TextStyle(
+                      fontSize: 22,
+                      color: Colors.white,
+                      fontWeight: FontWeight.w600,
+                    ),
                   ),
-                ),
+                  SizedBox(height: 4),
+                  Text(
+                    'Track your class participation',
+                    style: TextStyle(fontSize: 12, color: Color(0xFFBAE6FD)),
+                  ),
+                ],
               ),
             ),
             Expanded(
@@ -448,99 +851,140 @@ class StudentGradesScreen extends StatelessWidget {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: [
-                    // Overall card
+                    // Overall stats
                     Container(
                       decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(20),
-                        gradient: const LinearGradient(
-                          begin: Alignment.topLeft,
-                          end: Alignment.bottomRight,
-                          colors: [
-                            Color(0xFFF59E0B), // amber-500
-                            Color(0xFFEA580C), // amber-600
-                          ],
-                        ),
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(18),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x14374151),
+                            blurRadius: 16,
+                            offset: Offset(0, 8),
+                          ),
+                        ],
                       ),
                       padding: const EdgeInsets.all(20),
-                      margin: const EdgeInsets.only(bottom: 16),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
                             children: [
-                              Container(
-                                width: 48,
-                                height: 48,
-                                decoration: BoxDecoration(
-                                  color: Colors.white.withOpacity(0.18),
-                                  borderRadius: BorderRadius.circular(14),
-                                ),
-                                child: const Icon(
-                                  Icons.emoji_events_rounded,
-                                  color: Colors.white,
-                                  size: 26,
+                              const Expanded(
+                                child: Text(
+                                  'Overall Attendance',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    color: Color(0xFF64748B),
+                                  ),
                                 ),
                               ),
-                              const SizedBox(width: 12),
-                              const Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      'Overall Average',
-                                      style: TextStyle(
-                                        fontSize: 13,
-                                        color: Color(0xFFFDE68A), // amber-200
-                                      ),
-                                    ),
-                                    SizedBox(height: 2),
-                                    Text(
-                                      'Academic performance',
-                                      style: TextStyle(
-                                        fontSize: 11,
-                                        color: Color(0xFFFDE68A),
-                                      ),
-                                    ),
-                                  ],
+                              Icon(
+                                Icons.calendar_month_rounded,
+                                size: 20,
+                                color: Colors.grey.shade400,
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Row(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            children: [
+                              Text(
+                                '$overall%',
+                                style: TextStyle(
+                                  fontSize: 34,
+                                  fontWeight: FontWeight.w800,
+                                  color: percentageColor(overall),
+                                ),
+                              ),
+                              const SizedBox(width: 10),
+                              const Padding(
+                                padding: EdgeInsets.only(bottom: 4),
+                                child: Text(
+                                  'across all subjects',
+                                  style: TextStyle(
+                                    fontSize: 12,
+                                    color: Color(0xFF94A3B8),
+                                  ),
                                 ),
                               ),
                             ],
                           ),
-                          const SizedBox(height: 16),
-                          Text(
-                            '$overallAverage%',
-                            style: const TextStyle(
-                              fontSize: 32,
-                              fontWeight: FontWeight.w700,
-                              color: Colors.white,
-                            ),
-                          ),
-                          const SizedBox(height: 4),
-                          const Text(
-                            'Keep up the excellent work!',
-                            style: TextStyle(
-                              fontSize: 13,
-                              color: Color(0xFFFDE68A),
-                            ),
-                          ),
                         ],
                       ),
                     ),
-
-                    // Subject list
-                    Column(
-                      children: subjects.map((subject) {
-                        return _SubjectGradeTile(
-                          subject: subject,
-                          gradeColor: _gradeColor,
-                          gradeBg: _gradeBg,
-                          barColor: _barColor,
-                        );
-                      }).toList(),
-                    ),
-
                     const SizedBox(height: 16),
-                    // Simple summary
+
+                    // Subject tabs
+                    SizedBox(
+                      height: 72,
+                      child: ListView.separated(
+                        scrollDirection: Axis.horizontal,
+                        itemCount: _attendanceSubjects.length,
+                        separatorBuilder: (_, __) => const SizedBox(width: 10),
+                        itemBuilder: (context, index) {
+                          final s = _attendanceSubjects[index];
+                          final selected = s.id == _selectedSubjectId;
+                          final p = _subjectPercentage(s.id);
+                          return InkWell(
+                            onTap: () =>
+                                setState(() => _selectedSubjectId = s.id),
+                            borderRadius: BorderRadius.circular(14),
+                            child: Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 10,
+                              ),
+                              decoration: BoxDecoration(
+                                color: selected
+                                    ? const Color(0xFF0EA5E9)
+                                    : Colors.white,
+                                borderRadius: BorderRadius.circular(14),
+                                boxShadow: selected
+                                    ? const [
+                                        BoxShadow(
+                                          color: Color(0x260EA5E9),
+                                          blurRadius: 14,
+                                          offset: Offset(0, 8),
+                                        ),
+                                      ]
+                                    : null,
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                mainAxisAlignment: MainAxisAlignment.center,
+                                children: [
+                                  Text(
+                                    s.name,
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w600,
+                                      color: selected
+                                          ? Colors.white
+                                          : const Color(0xFF334155),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 4),
+                                  Text(
+                                    '$p% attendance',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: selected
+                                          ? const Color(0xFFBAE6FD)
+                                          : const Color(0xFF64748B),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          );
+                        },
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // Subject stats
                     Container(
                       decoration: BoxDecoration(
                         color: Colors.white,
@@ -553,19 +997,1763 @@ class StudentGradesScreen extends StatelessWidget {
                           ),
                         ],
                       ),
-                      padding: const EdgeInsets.all(16),
+                      padding: const EdgeInsets.all(20),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  subject.name,
+                                  style: const TextStyle(
+                                    fontSize: 16,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF0F172A),
+                                  ),
+                                ),
+                              ),
+                              Text(
+                                '$subjectPercentage%',
+                                style: TextStyle(
+                                  fontSize: 28,
+                                  fontWeight: FontWeight.w800,
+                                  color: percentageColor(subjectPercentage),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFF8FAFC),
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                            child: Row(
+                              children: [
+                                Icon(
+                                  performance.icon,
+                                  size: 18,
+                                  color: performance.color,
+                                ),
+                                const SizedBox(width: 8),
+                                Text(
+                                  performance.text,
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: performance.color,
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 16),
+                          Row(
+                            children: [
+                              Expanded(
+                                child: _MiniStat(
+                                  bg: const Color(0xFFDCFCE7),
+                                  icon: Icons.check_circle_rounded,
+                                  iconColor: const Color(0xFF16A34A),
+                                  value: '${stats.present}',
+                                  label: 'Present',
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _MiniStat(
+                                  bg: const Color(0xFFFEF3C7),
+                                  icon: Icons.schedule_rounded,
+                                  iconColor: const Color(0xFFD97706),
+                                  value: '${stats.late}',
+                                  label: 'Late',
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: _MiniStat(
+                                  bg: const Color(0xFFFEE2E2),
+                                  icon: Icons.cancel_rounded,
+                                  iconColor: const Color(0xFFDC2626),
+                                  value: '${stats.absent}',
+                                  label: 'Absent',
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 16),
+
+                    // History
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(18),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x0F000000),
+                            blurRadius: 10,
+                            offset: Offset(0, 4),
+                          ),
+                        ],
+                      ),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.fromLTRB(20, 16, 20, 12),
+                            decoration: const BoxDecoration(
+                              border: Border(
+                                bottom: BorderSide(color: Color(0xFFE2E8F0)),
+                              ),
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                const Text(
+                                  'Attendance History',
+                                  style: TextStyle(
+                                    fontSize: 13,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF0F172A),
+                                  ),
+                                ),
+                                const SizedBox(height: 2),
+                                Text(
+                                  '${stats.total} sessions recorded',
+                                  style: const TextStyle(
+                                    fontSize: 11,
+                                    color: Color(0xFF64748B),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                          if (subjectRecords.isEmpty)
+                            Padding(
+                              padding: const EdgeInsets.all(32),
+                              child: Column(
+                                children: [
+                                  Icon(
+                                    Icons.calendar_month_rounded,
+                                    size: 52,
+                                    color: Colors.grey.shade300,
+                                  ),
+                                  const SizedBox(height: 12),
+                                  const Text(
+                                    'No attendance records yet',
+                                    style: TextStyle(color: Color(0xFF64748B)),
+                                  ),
+                                ],
+                              ),
+                            )
+                          else
+                            Column(
+                              children: subjectRecords.map((r) {
+                                final s = statusStyle(r.status);
+                                final statusText = switch (r.status) {
+                                  _AttendanceStatus.present => 'present',
+                                  _AttendanceStatus.late => 'late',
+                                  _AttendanceStatus.absent => 'absent',
+                                };
+                                return Container(
+                                  decoration: const BoxDecoration(
+                                    border: Border(
+                                      bottom: BorderSide(
+                                        color: Color(0xFFE2E8F0),
+                                      ),
+                                    ),
+                                  ),
+                                  child: InkWell(
+                                    onTap: () {},
+                                    child: Padding(
+                                      padding: const EdgeInsets.symmetric(
+                                        horizontal: 20,
+                                        vertical: 14,
+                                      ),
+                                      child: Row(
+                                        children: [
+                                          Container(
+                                            width: 40,
+                                            height: 40,
+                                            decoration: BoxDecoration(
+                                              color: s.bg,
+                                              borderRadius:
+                                                  BorderRadius.circular(12),
+                                              border: Border.all(
+                                                color: s.border,
+                                              ),
+                                            ),
+                                            child: Icon(
+                                              s.icon,
+                                              color: s.text,
+                                              size: 22,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 12),
+                                          Expanded(
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.start,
+                                              children: [
+                                                Text(
+                                                  _formatDate(r.date),
+                                                  style: const TextStyle(
+                                                    fontSize: 13,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: Color(0xFF0F172A),
+                                                  ),
+                                                ),
+                                                const SizedBox(height: 2),
+                                                Text(
+                                                  subject.name,
+                                                  style: const TextStyle(
+                                                    fontSize: 11,
+                                                    color: Color(0xFF64748B),
+                                                  ),
+                                                ),
+                                              ],
+                                            ),
+                                          ),
+                                          Container(
+                                            padding: const EdgeInsets.symmetric(
+                                              horizontal: 10,
+                                              vertical: 6,
+                                            ),
+                                            decoration: BoxDecoration(
+                                              color: s.bg,
+                                              borderRadius:
+                                                  BorderRadius.circular(999),
+                                              border: Border.all(
+                                                color: s.border,
+                                              ),
+                                            ),
+                                            child: Text(
+                                              statusText,
+                                              style: TextStyle(
+                                                fontSize: 11,
+                                                fontWeight: FontWeight.w600,
+                                                color: s.text,
+                                              ),
+                                            ),
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
+                                );
+                              }).toList(),
+                            ),
+                        ],
+                      ),
+                    ),
+                    if (subjectPercentage < 85) ...[
+                      const SizedBox(height: 16),
+                      Container(
+                        padding: const EdgeInsets.all(14),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFFEF3C7),
+                          borderRadius: BorderRadius.circular(18),
+                          border: Border.all(color: const Color(0xFFFDE68A)),
+                        ),
+                        child: const Row(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Icon(
+                              Icons.info_outline_rounded,
+                              color: Color(0xFFD97706),
+                              size: 20,
+                            ),
+                            SizedBox(width: 10),
+                            Expanded(
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Improve Your Attendance',
+                                    style: TextStyle(
+                                      fontSize: 13,
+                                      fontWeight: FontWeight.w700,
+                                      color: Color(0xFF92400E),
+                                    ),
+                                  ),
+                                  SizedBox(height: 4),
+                                  Text(
+                                    'Regular attendance is important for your learning and promotion. Try to attend all classes and arrive on time.',
+                                    style: TextStyle(
+                                      fontSize: 11,
+                                      color: Color(0xFF92400E),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _DashboardStatCard extends StatelessWidget {
+  const _DashboardStatCard({
+    required this.iconBackground,
+    required this.iconColor,
+    required this.icon,
+    required this.value,
+    required this.label,
+  });
+
+  final Color iconBackground;
+  final Color iconColor;
+  final IconData icon;
+  final String value;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: const [
+          BoxShadow(
+            color: Color(0x0F000000),
+            blurRadius: 10,
+            offset: Offset(0, 4),
+          ),
+        ],
+      ),
+      padding: const EdgeInsets.all(16),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Container(
+            width: 40,
+            height: 40,
+            decoration: BoxDecoration(
+              color: iconBackground,
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Icon(icon, color: iconColor, size: 20),
+          ),
+          const SizedBox(height: 10),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 22,
+              fontWeight: FontWeight.w700,
+              color: Color(0xFF0F172A),
+            ),
+          ),
+          const SizedBox(height: 2),
+          Text(
+            label,
+            style: const TextStyle(fontSize: 12, color: Color(0xFF64748B)),
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _QuickActionTile extends StatelessWidget {
+  const _QuickActionTile({
+    required this.icon,
+    required this.label,
+    required this.onTap,
+  });
+
+  final IconData icon;
+  final String label;
+  final VoidCallback onTap;
+
+  @override
+  Widget build(BuildContext context) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(14),
+      child: Container(
+        decoration: BoxDecoration(
+          border: Border.all(color: const Color(0xFFE2E8F0)),
+          borderRadius: BorderRadius.circular(14),
+        ),
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Icon(icon, size: 20, color: const Color(0xFF0EA5E9)),
+            const SizedBox(height: 8),
+            Text(
+              label,
+              style: const TextStyle(fontSize: 12, color: Color(0xFF334155)),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _KeyValueRow extends StatelessWidget {
+  const _KeyValueRow({required this.label, required this.value});
+
+  final String label;
+  final String value;
+
+  @override
+  Widget build(BuildContext context) {
+    return Row(
+      children: [
+        Expanded(
+          child: Text(
+            label,
+            style: const TextStyle(fontSize: 13, color: Color(0xFF334155)),
+          ),
+        ),
+        Text(
+          value,
+          style: const TextStyle(fontSize: 13, color: Color(0xFF0F172A)),
+        ),
+      ],
+    );
+  }
+}
+
+class _MiniStat extends StatelessWidget {
+  const _MiniStat({
+    required this.bg,
+    required this.icon,
+    required this.iconColor,
+    required this.value,
+    required this.label,
+  });
+
+  final Color bg;
+  final IconData icon;
+  final Color iconColor;
+  final String value;
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(10),
+          decoration: BoxDecoration(
+            color: bg,
+            borderRadius: BorderRadius.circular(14),
+          ),
+          child: Icon(icon, color: iconColor, size: 22),
+        ),
+        const SizedBox(height: 8),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 18,
+            fontWeight: FontWeight.w800,
+            color: Color(0xFF0F172A),
+          ),
+        ),
+        const SizedBox(height: 2),
+        Text(
+          label,
+          style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
+        ),
+      ],
+    );
+  }
+}
+
+enum _AttendanceStatus { present, late, absent }
+
+class _AttendanceSubject {
+  const _AttendanceSubject({required this.id, required this.name});
+  final String id;
+  final String name;
+}
+
+class _AttendanceRecord {
+  const _AttendanceRecord({
+    required this.subjectId,
+    required this.date,
+    required this.status,
+  });
+
+  final String subjectId;
+  final DateTime date;
+  final _AttendanceStatus status;
+}
+
+const _attendanceSubjects = <_AttendanceSubject>[
+  _AttendanceSubject(id: 'bible', name: 'Bible Studies'),
+  _AttendanceSubject(id: 'history', name: 'Christian History'),
+  _AttendanceSubject(id: 'memory', name: 'Memory Verses'),
+  _AttendanceSubject(id: 'activities', name: 'Activities'),
+];
+
+final _attendanceRecords = <_AttendanceRecord>[
+  _AttendanceRecord(
+    subjectId: 'bible',
+    date: DateTime(2026, 3, 2),
+    status: _AttendanceStatus.present,
+  ),
+  _AttendanceRecord(
+    subjectId: 'bible',
+    date: DateTime(2026, 2, 23),
+    status: _AttendanceStatus.late,
+  ),
+  _AttendanceRecord(
+    subjectId: 'bible',
+    date: DateTime(2026, 2, 16),
+    status: _AttendanceStatus.absent,
+  ),
+  _AttendanceRecord(
+    subjectId: 'history',
+    date: DateTime(2026, 3, 1),
+    status: _AttendanceStatus.present,
+  ),
+  _AttendanceRecord(
+    subjectId: 'history',
+    date: DateTime(2026, 2, 22),
+    status: _AttendanceStatus.present,
+  ),
+  _AttendanceRecord(
+    subjectId: 'memory',
+    date: DateTime(2026, 3, 1),
+    status: _AttendanceStatus.present,
+  ),
+  _AttendanceRecord(
+    subjectId: 'memory',
+    date: DateTime(2026, 2, 22),
+    status: _AttendanceStatus.absent,
+  ),
+  _AttendanceRecord(
+    subjectId: 'activities',
+    date: DateTime(2026, 3, 2),
+    status: _AttendanceStatus.present,
+  ),
+  _AttendanceRecord(
+    subjectId: 'activities',
+    date: DateTime(2026, 2, 23),
+    status: _AttendanceStatus.present,
+  ),
+];
+
+class StudentGradesScreen extends StatefulWidget {
+  const StudentGradesScreen({super.key});
+
+  @override
+  State<StudentGradesScreen> createState() => _StudentGradesScreenState();
+}
+
+class _StudentGradesScreenState extends State<StudentGradesScreen> {
+  String? _expandedSubjectId;
+  PromotionCriteriaSet _criteria = PromotionCriteriaSet.defaults;
+  bool _loadingCriteria = false;
+
+  final _academicYear = const _GradesAcademicYear(
+    name: '2025-2026',
+    status: _AcademicYearStatus.active,
+  );
+
+  final _currentStudent = const _GradesStudent(
+    id: '1',
+    name: 'Sarah Johnson',
+    promotionStatus: _PromotionStatus.eligible,
+  );
+
+  late final List<_GradesSubject> _subjects = const [
+    _GradesSubject(id: '1', name: 'Bible Studies'),
+    _GradesSubject(id: '2', name: 'Christian History'),
+    _GradesSubject(id: '3', name: 'Memory Verses'),
+    _GradesSubject(id: '4', name: 'Activities'),
+  ];
+
+  late final List<_GradesEntry> _gradeEntries = [
+    _GradesEntry(
+      id: 'g1',
+      subjectId: '1',
+      gradeType: 'Quiz 1',
+      maxScore: 20,
+      weight: 20,
+      date: DateTime(2026, 2, 10),
+      scores: const {'1': 18, '2': 15, '3': 19, '4': null},
+    ),
+    _GradesEntry(
+      id: 'g2',
+      subjectId: '1',
+      gradeType: 'Midterm Exam',
+      maxScore: 100,
+      weight: 40,
+      date: DateTime(2026, 3, 1),
+      scores: const {'1': 92, '2': 78, '3': 88, '4': 0},
+    ),
+    _GradesEntry(
+      id: 'g3',
+      subjectId: '1',
+      gradeType: 'Final Project',
+      maxScore: 50,
+      weight: 40,
+      date: DateTime(2026, 3, 4),
+      scores: const {'1': 48, '2': 41, '3': 46, '4': 45},
+    ),
+    _GradesEntry(
+      id: 'g4',
+      subjectId: '2',
+      gradeType: 'Essay',
+      maxScore: 50,
+      weight: 50,
+      date: DateTime(2026, 2, 18),
+      scores: const {'1': 40, '2': 35, '3': 45, '4': 44},
+    ),
+    _GradesEntry(
+      id: 'g5',
+      subjectId: '2',
+      gradeType: 'Final Exam',
+      maxScore: 100,
+      weight: 50,
+      date: DateTime(2026, 3, 3),
+      scores: const {'1': 84, '2': 66, '3': 90, '4': 75},
+    ),
+    _GradesEntry(
+      id: 'g6',
+      subjectId: '3',
+      gradeType: 'Recitation',
+      maxScore: 10,
+      date: DateTime(2026, 2, 20),
+      scores: const {'1': 8, '2': 6, '3': 9, '4': 7},
+    ),
+    _GradesEntry(
+      id: 'g7',
+      subjectId: '3',
+      gradeType: 'Test',
+      maxScore: 100,
+      date: DateTime(2026, 3, 2),
+      scores: const {'1': 78, '2': 61, '3': 85, '4': 70},
+    ),
+    _GradesEntry(
+      id: 'g8',
+      subjectId: '4',
+      gradeType: 'Participation',
+      maxScore: 10,
+      date: DateTime(2026, 2, 22),
+      scores: const {'1': 9, '2': 8, '3': 10, '4': 9},
+    ),
+    _GradesEntry(
+      id: 'g9',
+      subjectId: '4',
+      gradeType: 'Final Activity',
+      maxScore: 100,
+      date: DateTime(2026, 3, 4),
+      scores: const {'1': 88, '2': 72, '3': 95, '4': 80},
+    ),
+  ];
+
+  bool get _isYearActive => _academicYear.status == _AcademicYearStatus.active;
+
+  @override
+  void initState() {
+    super.initState();
+    _loadPromotionCriteria();
+  }
+
+  Future<void> _loadPromotionCriteria() async {
+    if (_loadingCriteria) return;
+
+    setState(() {
+      _loadingCriteria = true;
+    });
+
+    try {
+      final client = Supabase.instance.client;
+      final repo = PromotionCriteriaRepository(client);
+      final criteria = await repo.fetchForCurrentUserActiveYear();
+      if (!mounted) return;
+      if (criteria != null) {
+        setState(() {
+          _criteria = criteria;
+        });
+      }
+    } catch (_) {
+      // Keep defaults on any error.
+    } finally {
+      if (!mounted) return;
+      setState(() {
+        _loadingCriteria = false;
+      });
+    }
+  }
+
+  Color _gradeColor(int grade) {
+    final c = _criteria.classify(grade.toDouble());
+    switch (c) {
+      case GradeClassification.excellent:
+        return const Color(0xFF16A34A); // green-600
+      case GradeClassification.veryGood:
+      case GradeClassification.good:
+        return const Color(0xFF0284C7); // sky-600
+      case GradeClassification.enough:
+        return const Color(0xFFF59E0B); // amber-600
+      case GradeClassification.critical:
+        return const Color(0xFFDC2626); // red-600
+    }
+  }
+
+  Color _gradeBgColor(int grade) {
+    final c = _criteria.classify(grade.toDouble());
+    switch (c) {
+      case GradeClassification.excellent:
+        return const Color(0xFFDCFCE7); // green-50
+      case GradeClassification.veryGood:
+      case GradeClassification.good:
+        return const Color(0xFFE0F2FE); // sky-50
+      case GradeClassification.enough:
+        return const Color(0xFFFEF3C7); // amber-50
+      case GradeClassification.critical:
+        return const Color(0xFFFEE2E2); // red-50
+    }
+  }
+
+  Color _barColor(int grade) {
+    final c = _criteria.classify(grade.toDouble());
+    switch (c) {
+      case GradeClassification.excellent:
+        return const Color(0xFF22C55E); // green-500
+      case GradeClassification.veryGood:
+      case GradeClassification.good:
+        return const Color(0xFF0EA5E9); // sky-500
+      case GradeClassification.enough:
+        return const Color(0xFFFBBF24); // amber-500
+      case GradeClassification.critical:
+        return const Color(0xFFEF4444); // red-500
+    }
+  }
+
+  List<_GradesEntry> _entriesForSubject(String subjectId) {
+    final entries = _gradeEntries
+        .where((e) => e.subjectId == subjectId)
+        .toList();
+    entries.sort((a, b) => b.date.compareTo(a.date));
+    return entries;
+  }
+
+  int? _calculateSubjectAverage(String studentId, String subjectId) {
+    final allEntries = _entriesForSubject(subjectId);
+    if (allEntries.isEmpty) return 0;
+
+    final hasAllScores = allEntries.every((entry) {
+      final score = entry.scores[studentId];
+      return score != null;
+    });
+
+    if (!hasAllScores) return null;
+
+    final entries = allEntries.where(
+      (entry) => entry.scores[studentId] != null,
+    );
+    if (entries.isEmpty) return 0;
+
+    final totalWeight = entries.fold<int>(0, (sum, e) => sum + (e.weight ?? 0));
+    if (totalWeight > 0) {
+      var weightedScore = 0.0;
+      for (final entry in entries) {
+        final percentage = (entry.scores[studentId]! / entry.maxScore) * 100;
+        final normalizedWeight = (entry.weight ?? 0) / totalWeight;
+        weightedScore += percentage * normalizedWeight;
+      }
+      return weightedScore.round();
+    }
+
+    var totalPercentage = 0.0;
+    for (final entry in entries) {
+      totalPercentage += (entry.scores[studentId]! / entry.maxScore) * 100;
+    }
+    return (totalPercentage / entries.length).round();
+  }
+
+  int _calculateOverallAverage(String studentId) {
+    if (_subjects.isEmpty) return 0;
+
+    var total = 0;
+    var count = 0;
+    for (final subject in _subjects) {
+      final subjectAvg = _calculateSubjectAverage(studentId, subject.id);
+      if (subjectAvg != null) {
+        total += subjectAvg;
+        count++;
+      }
+    }
+    if (count == 0) return 0;
+    return (total / count).round();
+  }
+
+  String _formatMonthDay(DateTime date) {
+    const months = [
+      'Jan',
+      'Feb',
+      'Mar',
+      'Apr',
+      'May',
+      'Jun',
+      'Jul',
+      'Aug',
+      'Sep',
+      'Oct',
+      'Nov',
+      'Dec',
+    ];
+    return '${months[date.month - 1]} ${date.day}';
+  }
+
+  void _toggleSubject(String subjectId) {
+    setState(() {
+      _expandedSubjectId = _expandedSubjectId == subjectId ? null : subjectId;
+    });
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    if (!_isYearActive) {
+      return _buildFinalResults(context);
+    }
+    return _buildActiveYear(context);
+  }
+
+  Widget _buildFinalResults(BuildContext context) {
+    final avgGrade = _calculateOverallAverage(_currentStudent.id);
+
+    Color promotionGradientStart;
+    Color promotionGradientEnd;
+    IconData promotionIcon;
+    String promotionTitle;
+    String promotionMessage;
+
+    switch (_currentStudent.promotionStatus) {
+      case _PromotionStatus.eligible:
+        promotionGradientStart = const Color(0xFF22C55E); // green-500
+        promotionGradientEnd = const Color(0xFF16A34A); // green-600
+        promotionIcon = Icons.check_circle_rounded;
+        promotionTitle = 'Promoted';
+        promotionMessage =
+            'Congratulations! You have been promoted to the next grade.';
+        break;
+      case _PromotionStatus.atRisk:
+        promotionGradientStart = const Color(0xFFF59E0B); // amber-500
+        promotionGradientEnd = const Color(0xFFEA580C); // amber-600
+        promotionIcon = Icons.warning_rounded;
+        promotionTitle = 'At Risk';
+        promotionMessage =
+            'You are at risk of not being promoted. Please consult with your teacher.';
+        break;
+      case _PromotionStatus.notEligible:
+        promotionGradientStart = const Color(0xFFEF4444); // red-500
+        promotionGradientEnd = const Color(0xFFDC2626); // red-600
+        promotionIcon = Icons.warning_rounded;
+        promotionTitle = 'Not Promoted';
+        promotionMessage =
+            'You have not met the promotion requirements. Please consult with your teacher.';
+        break;
+    }
+
+    final subjectAverages = _subjects
+        .map((s) => _calculateSubjectAverage(_currentStudent.id, s.id) ?? 0)
+        .toList();
+
+    final highest = subjectAverages.isEmpty
+        ? 0
+        : subjectAverages.reduce((a, b) => a > b ? a : b);
+    final lowest = subjectAverages.isEmpty
+        ? 0
+        : subjectAverages.reduce((a, b) => a < b ? a : b);
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
+              ),
+              width: double.infinity,
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  const Text(
+                    'Final Results',
+                    style: TextStyle(
+                      fontSize: 22,
+                      fontWeight: FontWeight.w600,
+                      color: Color(0xFF0F172A),
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Academic Year ${_academicYear.name}',
+                    style: const TextStyle(
+                      fontSize: 13,
+                      color: Color(0xFF64748B),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [Color(0xFFF59E0B), Color(0xFFEA580C)],
+                        ),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x14000000),
+                            blurRadius: 12,
+                            offset: Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      padding: const EdgeInsets.all(20),
+                      margin: const EdgeInsets.only(bottom: 12),
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Row(
                             children: [
-                              Icon(
+                              Container(
+                                width: 48,
+                                height: 48,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Icon(
+                                  Icons.emoji_events_rounded,
+                                  color: Colors.white,
+                                  size: 26,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Final Grade',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: Color(0xFFFDE68A),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '$avgGrade%',
+                                      style: const TextStyle(
+                                        fontSize: 30,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          Text(
+                            'Academic Year ${_academicYear.name}',
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFFFEF3C7), // amber-100
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        gradient: LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [
+                            promotionGradientStart,
+                            promotionGradientEnd,
+                          ],
+                        ),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x14000000),
+                            blurRadius: 12,
+                            offset: Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      padding: const EdgeInsets.all(20),
+                      margin: const EdgeInsets.only(bottom: 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                width: 48,
+                                height: 48,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: Icon(
+                                  promotionIcon,
+                                  color: Colors.white,
+                                  size: 26,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Promotion Status',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: Color(0xEFFFFFFF),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      promotionTitle,
+                                      style: const TextStyle(
+                                        fontSize: 22,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 10),
+                          Text(
+                            promotionMessage,
+                            style: const TextStyle(
+                              fontSize: 13,
+                              color: Color(0xEFFFFFFF),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x14000000),
+                            blurRadius: 12,
+                            offset: Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      clipBehavior: Clip.antiAlias,
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                            decoration: const BoxDecoration(
+                              border: Border(
+                                bottom: BorderSide(color: Color(0xFFF1F5F9)),
+                              ),
+                            ),
+                            child: const Text(
+                              'Final Subject Grades',
+                              style: TextStyle(
+                                fontSize: 14,
+                                fontWeight: FontWeight.w600,
+                                color: Color(0xFF0F172A),
+                              ),
+                            ),
+                          ),
+                          ..._subjects.map((subject) {
+                            final subjectAverage =
+                                _calculateSubjectAverage(
+                                  _currentStudent.id,
+                                  subject.id,
+                                ) ??
+                                0;
+                            return Container(
+                              padding: const EdgeInsets.fromLTRB(
+                                16,
+                                14,
+                                16,
+                                14,
+                              ),
+                              decoration: const BoxDecoration(
+                                border: Border(
+                                  bottom: BorderSide(color: Color(0xFFF1F5F9)),
+                                ),
+                              ),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.stretch,
+                                children: [
+                                  Row(
+                                    children: [
+                                      Expanded(
+                                        child: Text(
+                                          subject.name,
+                                          style: const TextStyle(
+                                            fontSize: 14,
+                                            fontWeight: FontWeight.w600,
+                                            color: Color(0xFF0F172A),
+                                          ),
+                                        ),
+                                      ),
+                                      Container(
+                                        padding: const EdgeInsets.symmetric(
+                                          horizontal: 14,
+                                          vertical: 8,
+                                        ),
+                                        decoration: BoxDecoration(
+                                          color: _gradeBgColor(subjectAverage),
+                                          borderRadius: BorderRadius.circular(
+                                            10,
+                                          ),
+                                        ),
+                                        child: Text(
+                                          '$subjectAverage%',
+                                          style: TextStyle(
+                                            fontSize: 16,
+                                            fontWeight: FontWeight.w600,
+                                            color: _gradeColor(subjectAverage),
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 10),
+                                  _PercentBar(
+                                    value: subjectAverage,
+                                    backgroundColor: const Color(0xFFF1F5F9),
+                                    barColor: _barColor(subjectAverage),
+                                    height: 8,
+                                  ),
+                                ],
+                              ),
+                            );
+                          }),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x14000000),
+                            blurRadius: 12,
+                            offset: Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      padding: const EdgeInsets.all(18),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          Row(
+                            children: [
+                              const Icon(
                                 Icons.trending_up_rounded,
-                                color: Theme.of(context).colorScheme.primary,
                                 size: 20,
+                                color: Color(0xFF0284C7), // sky-600
                               ),
                               const SizedBox(width: 8),
                               const Text(
+                                'Final Summary',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFF0F172A),
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 14),
+                          _SummaryRow(
+                            label: 'Highest Grade',
+                            value: '$highest%',
+                          ),
+                          const SizedBox(height: 8),
+                          _SummaryRow(label: 'Lowest Grade', value: '$lowest%'),
+                          const SizedBox(height: 12),
+                          const Divider(height: 1, color: Color(0xFFF1F5F9)),
+                          const SizedBox(height: 12),
+                          _SummaryRow(
+                            label: 'Overall Average',
+                            value: '$avgGrade%',
+                          ),
+                        ],
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFFE0F2FE), // sky-50
+                        borderRadius: BorderRadius.circular(16),
+                        border: Border.all(color: const Color(0xFFBAE6FD)),
+                      ),
+                      padding: const EdgeInsets.all(14),
+                      child: Text(
+                        'The academic year has ended. These are your final grades for ${_academicYear.name}. Enjoy your break and we look forward to seeing you in the next academic year!',
+                        style: const TextStyle(
+                          fontSize: 13,
+                          color: Color(0xFF0C4A6E), // sky-900
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildActiveYear(BuildContext context) {
+    final avgGrade = _calculateOverallAverage(_currentStudent.id);
+
+    final highest = _subjects
+        .map((s) => _calculateSubjectAverage(_currentStudent.id, s.id) ?? 0)
+        .reduce((a, b) => a > b ? a : b);
+    final lowest = _subjects
+        .map((s) => _calculateSubjectAverage(_currentStudent.id, s.id) ?? 0)
+        .reduce((a, b) => a < b ? a : b);
+
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
+      body: SafeArea(
+        child: Column(
+          children: [
+            Container(
+              padding: const EdgeInsets.fromLTRB(24, 24, 24, 16),
+              decoration: const BoxDecoration(
+                color: Colors.white,
+                border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
+              ),
+              width: double.infinity,
+              child: const Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Grades',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.w600,
+                    color: Color(0xFF0F172A),
+                  ),
+                ),
+              ),
+            ),
+            Expanded(
+              child: SingleChildScrollView(
+                padding: const EdgeInsets.fromLTRB(24, 16, 24, 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Container(
+                      decoration: BoxDecoration(
+                        borderRadius: BorderRadius.circular(16),
+                        gradient: const LinearGradient(
+                          begin: Alignment.topLeft,
+                          end: Alignment.bottomRight,
+                          colors: [Color(0xFFF59E0B), Color(0xFFEA580C)],
+                        ),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x14000000),
+                            blurRadius: 12,
+                            offset: Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      padding: const EdgeInsets.all(20),
+                      margin: const EdgeInsets.only(bottom: 16),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Row(
+                            children: [
+                              Container(
+                                width: 48,
+                                height: 48,
+                                decoration: BoxDecoration(
+                                  color: Colors.white.withOpacity(0.2),
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                                child: const Icon(
+                                  Icons.emoji_events_rounded,
+                                  color: Colors.white,
+                                  size: 26,
+                                ),
+                              ),
+                              const SizedBox(width: 12),
+                              Expanded(
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    const Text(
+                                      'Overall Average',
+                                      style: TextStyle(
+                                        fontSize: 13,
+                                        color: Color(0xFFFDE68A),
+                                      ),
+                                    ),
+                                    const SizedBox(height: 2),
+                                    Text(
+                                      '$avgGrade%',
+                                      style: const TextStyle(
+                                        fontSize: 30,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.white,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                          const SizedBox(height: 12),
+                          const Text(
+                            'Keep up the excellent work!',
+                            style: TextStyle(
+                              fontSize: 13,
+                              color: Color(0xFFFEF3C7), // amber-100
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                    Column(
+                      children: _subjects.map((subject) {
+                        final entries = _entriesForSubject(subject.id);
+                        final missingCount = entries
+                            .where((e) => e.scores[_currentStudent.id] == null)
+                            .length;
+                        final subjectAverage =
+                            _calculateSubjectAverage(
+                              _currentStudent.id,
+                              subject.id,
+                            ) ??
+                            0;
+                        final isExpanded = _expandedSubjectId == subject.id;
+
+                        return Container(
+                          margin: const EdgeInsets.only(bottom: 12),
+                          decoration: BoxDecoration(
+                            color: Colors.white,
+                            borderRadius: BorderRadius.circular(16),
+                            boxShadow: const [
+                              BoxShadow(
+                                color: Color(0x14000000),
+                                blurRadius: 12,
+                                offset: Offset(0, 6),
+                              ),
+                            ],
+                          ),
+                          clipBehavior: Clip.antiAlias,
+                          child: Column(
+                            children: [
+                              InkWell(
+                                onTap: () => _toggleSubject(subject.id),
+                                child: Padding(
+                                  padding: const EdgeInsets.fromLTRB(
+                                    16,
+                                    14,
+                                    16,
+                                    12,
+                                  ),
+                                  child: Column(
+                                    crossAxisAlignment:
+                                        CrossAxisAlignment.stretch,
+                                    children: [
+                                      Row(
+                                        children: [
+                                          Expanded(
+                                            child: Text(
+                                              subject.name,
+                                              style: const TextStyle(
+                                                fontSize: 14,
+                                                fontWeight: FontWeight.w600,
+                                                color: Color(0xFF0F172A),
+                                              ),
+                                            ),
+                                          ),
+                                          Row(
+                                            children: [
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 14,
+                                                      vertical: 8,
+                                                    ),
+                                                decoration: BoxDecoration(
+                                                  color: _gradeBgColor(
+                                                    subjectAverage,
+                                                  ),
+                                                  borderRadius:
+                                                      BorderRadius.circular(10),
+                                                ),
+                                                child: Text(
+                                                  '$subjectAverage%',
+                                                  style: TextStyle(
+                                                    fontSize: 16,
+                                                    fontWeight: FontWeight.w600,
+                                                    color: _gradeColor(
+                                                      subjectAverage,
+                                                    ),
+                                                  ),
+                                                ),
+                                              ),
+                                              const SizedBox(width: 10),
+                                              Icon(
+                                                isExpanded
+                                                    ? Icons
+                                                          .keyboard_arrow_up_rounded
+                                                    : Icons
+                                                          .keyboard_arrow_down_rounded,
+                                                color: const Color(
+                                                  0xFF94A3B8,
+                                                ), // slate-400
+                                              ),
+                                            ],
+                                          ),
+                                        ],
+                                      ),
+                                      const SizedBox(height: 10),
+                                      _PercentBar(
+                                        value: subjectAverage,
+                                        backgroundColor: const Color(
+                                          0xFFF1F5F9,
+                                        ),
+                                        barColor: _barColor(subjectAverage),
+                                        height: 8,
+                                      ),
+                                      const SizedBox(height: 10),
+                                      Align(
+                                        alignment: Alignment.centerLeft,
+                                        child: Text(
+                                          '${entries.length} ${entries.length == 1 ? 'assessment' : 'assessments'}',
+                                          style: const TextStyle(
+                                            fontSize: 12,
+                                            color: Color(
+                                              0xFF64748B,
+                                            ), // slate-500
+                                          ),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                              ),
+                              if (isExpanded)
+                                Container(
+                                  decoration: const BoxDecoration(
+                                    border: Border(
+                                      top: BorderSide(color: Color(0xFFF1F5F9)),
+                                    ),
+                                  ),
+                                  child: Column(
+                                    children: [
+                                      Container(
+                                        width: double.infinity,
+                                        padding: const EdgeInsets.fromLTRB(
+                                          16,
+                                          12,
+                                          16,
+                                          12,
+                                        ),
+                                        color: const Color(0xFFF8FAFC),
+                                        child: Column(
+                                          crossAxisAlignment:
+                                              CrossAxisAlignment.stretch,
+                                          children: [
+                                            const Text(
+                                              'Assessment Breakdown',
+                                              style: TextStyle(
+                                                fontSize: 13,
+                                                fontWeight: FontWeight.w500,
+                                                color: Color(
+                                                  0xFF334155,
+                                                ), // slate-700
+                                              ),
+                                            ),
+                                            if (missingCount > 0) ...[
+                                              const SizedBox(height: 10),
+                                              Container(
+                                                padding:
+                                                    const EdgeInsets.symmetric(
+                                                      horizontal: 12,
+                                                      vertical: 10,
+                                                    ),
+                                                decoration: BoxDecoration(
+                                                  color: const Color(
+                                                    0xFFFFFBEB,
+                                                  ), // amber-50
+                                                  borderRadius:
+                                                      BorderRadius.circular(10),
+                                                  border: Border.all(
+                                                    color: const Color(
+                                                      0xFFFDE68A,
+                                                    ), // amber-200
+                                                  ),
+                                                ),
+                                                child: Text(
+                                                  '⚠️ You are missing $missingCount assessment(s) in this subject. Your grade is calculated based only on completed assessments.',
+                                                  style: const TextStyle(
+                                                    fontSize: 12,
+                                                    color: Color(
+                                                      0xFF78350F,
+                                                    ), // amber-900
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ],
+                                        ),
+                                      ),
+                                      Column(
+                                        children: entries.map((entry) {
+                                          final score =
+                                              entry.scores[_currentStudent.id];
+                                          final hasScore = score != null;
+                                          final percentage = hasScore
+                                              ? ((score / entry.maxScore) * 100)
+                                                    .round()
+                                              : 0;
+
+                                          return Container(
+                                            padding: const EdgeInsets.fromLTRB(
+                                              16,
+                                              12,
+                                              16,
+                                              12,
+                                            ),
+                                            decoration: const BoxDecoration(
+                                              border: Border(
+                                                top: BorderSide(
+                                                  color: Color(0xFFF1F5F9),
+                                                ),
+                                              ),
+                                            ),
+                                            child: Column(
+                                              crossAxisAlignment:
+                                                  CrossAxisAlignment.stretch,
+                                              children: [
+                                                Row(
+                                                  crossAxisAlignment:
+                                                      CrossAxisAlignment.start,
+                                                  children: [
+                                                    Expanded(
+                                                      child: Column(
+                                                        crossAxisAlignment:
+                                                            CrossAxisAlignment
+                                                                .start,
+                                                        children: [
+                                                          Row(
+                                                            children: [
+                                                              Text(
+                                                                entry.gradeType,
+                                                                style: const TextStyle(
+                                                                  fontSize: 13,
+                                                                  fontWeight:
+                                                                      FontWeight
+                                                                          .w500,
+                                                                  color: Color(
+                                                                    0xFF0F172A,
+                                                                  ),
+                                                                ),
+                                                              ),
+                                                              if (entry
+                                                                      .weight !=
+                                                                  null) ...[
+                                                                const SizedBox(
+                                                                  width: 8,
+                                                                ),
+                                                                Container(
+                                                                  padding:
+                                                                      const EdgeInsets.symmetric(
+                                                                        horizontal:
+                                                                            10,
+                                                                        vertical:
+                                                                            4,
+                                                                      ),
+                                                                  decoration: BoxDecoration(
+                                                                    color: const Color(
+                                                                      0xFFFEF3C7,
+                                                                    ),
+                                                                    borderRadius:
+                                                                        BorderRadius.circular(
+                                                                          999,
+                                                                        ),
+                                                                  ),
+                                                                  child: Text(
+                                                                    '${entry.weight}%',
+                                                                    style: const TextStyle(
+                                                                      fontSize:
+                                                                          11,
+                                                                      color: Color(
+                                                                        0xFFB45309,
+                                                                      ),
+                                                                      fontWeight:
+                                                                          FontWeight
+                                                                              .w600,
+                                                                    ),
+                                                                  ),
+                                                                ),
+                                                              ],
+                                                            ],
+                                                          ),
+                                                          const SizedBox(
+                                                            height: 6,
+                                                          ),
+                                                          Text(
+                                                            _formatMonthDay(
+                                                              entry.date,
+                                                            ),
+                                                            style:
+                                                                const TextStyle(
+                                                                  fontSize: 12,
+                                                                  color: Color(
+                                                                    0xFF64748B,
+                                                                  ),
+                                                                ),
+                                                          ),
+                                                        ],
+                                                      ),
+                                                    ),
+                                                    Column(
+                                                      crossAxisAlignment:
+                                                          CrossAxisAlignment
+                                                              .end,
+                                                      children: [
+                                                        Text(
+                                                          hasScore
+                                                              ? '$percentage%'
+                                                              : 'Pending',
+                                                          style: TextStyle(
+                                                            fontSize: 14,
+                                                            fontWeight:
+                                                                FontWeight.w600,
+                                                            color: hasScore
+                                                                ? _gradeColor(
+                                                                    percentage,
+                                                                  )
+                                                                : const Color(
+                                                                    0xFF64748B,
+                                                                  ),
+                                                          ),
+                                                        ),
+                                                        const SizedBox(
+                                                          height: 2,
+                                                        ),
+                                                        Text(
+                                                          hasScore
+                                                              ? '$score/${entry.maxScore} pts'
+                                                              : '—',
+                                                          style:
+                                                              const TextStyle(
+                                                                fontSize: 12,
+                                                                color: Color(
+                                                                  0xFF64748B,
+                                                                ),
+                                                              ),
+                                                        ),
+                                                      ],
+                                                    ),
+                                                  ],
+                                                ),
+                                                const SizedBox(height: 10),
+                                                _PercentBar(
+                                                  value: percentage,
+                                                  backgroundColor: const Color(
+                                                    0xFFF1F5F9,
+                                                  ),
+                                                  barColor: hasScore
+                                                      ? _barColor(percentage)
+                                                      : const Color(0xFFE2E8F0),
+                                                  height: 6,
+                                                ),
+                                              ],
+                                            ),
+                                          );
+                                        }).toList(),
+                                      ),
+                                    ],
+                                  ),
+                                ),
+                            ],
+                          ),
+                        );
+                      }).toList(),
+                    ),
+                    const SizedBox(height: 12),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: Colors.white,
+                        borderRadius: BorderRadius.circular(16),
+                        boxShadow: const [
+                          BoxShadow(
+                            color: Color(0x14000000),
+                            blurRadius: 12,
+                            offset: Offset(0, 6),
+                          ),
+                        ],
+                      ),
+                      padding: const EdgeInsets.all(18),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          const Row(
+                            children: [
+                              Icon(
+                                Icons.trending_up_rounded,
+                                size: 20,
+                                color: Color(0xFF0284C7),
+                              ),
+                              SizedBox(width: 8),
+                              Text(
                                 'Performance Summary',
                                 style: TextStyle(
                                   fontSize: 14,
@@ -575,22 +2763,19 @@ class StudentGradesScreen extends StatelessWidget {
                               ),
                             ],
                           ),
+                          const SizedBox(height: 14),
+                          _SummaryRow(
+                            label: 'Highest Grade',
+                            value: '$highest%',
+                          ),
+                          const SizedBox(height: 8),
+                          _SummaryRow(label: 'Lowest Grade', value: '$lowest%'),
+                          const SizedBox(height: 12),
+                          const Divider(height: 1, color: Color(0xFFF1F5F9)),
                           const SizedBox(height: 12),
                           _SummaryRow(
-                            label: 'Total subjects',
-                            value: '${subjects.length}',
-                          ),
-                          const SizedBox(height: 6),
-                          _SummaryRow(
-                            label: 'Highest subject grade',
-                            value:
-                                '${subjects.map((s) => s.average).reduce((a, b) => a > b ? a : b)}%',
-                          ),
-                          const SizedBox(height: 6),
-                          _SummaryRow(
-                            label: 'Lowest subject grade',
-                            value:
-                                '${subjects.map((s) => s.average).reduce((a, b) => a < b ? a : b)}%',
+                            label: 'Total Subjects',
+                            value: '${_subjects.length}',
                           ),
                         ],
                       ),
@@ -601,6 +2786,97 @@ class StudentGradesScreen extends StatelessWidget {
             ),
           ],
         ),
+      ),
+    );
+  }
+}
+
+enum _AcademicYearStatus { active, ended }
+
+class _GradesAcademicYear {
+  const _GradesAcademicYear({required this.name, required this.status});
+
+  final String name;
+  final _AcademicYearStatus status;
+}
+
+enum _PromotionStatus { eligible, atRisk, notEligible }
+
+class _GradesStudent {
+  const _GradesStudent({
+    required this.id,
+    required this.name,
+    required this.promotionStatus,
+  });
+
+  final String id;
+  final String name;
+  final _PromotionStatus promotionStatus;
+}
+
+class _GradesSubject {
+  const _GradesSubject({required this.id, required this.name});
+
+  final String id;
+  final String name;
+}
+
+class _GradesEntry {
+  const _GradesEntry({
+    required this.id,
+    required this.subjectId,
+    required this.gradeType,
+    required this.maxScore,
+    required this.date,
+    required this.scores,
+    this.weight,
+  });
+
+  final String id;
+  final String subjectId;
+  final String gradeType;
+  final int maxScore;
+  final int? weight;
+  final DateTime date;
+  final Map<String, int?> scores;
+}
+
+class _PercentBar extends StatelessWidget {
+  const _PercentBar({
+    required this.value,
+    required this.backgroundColor,
+    required this.barColor,
+    required this.height,
+  });
+
+  final int value;
+  final Color backgroundColor;
+  final Color barColor;
+  final double height;
+
+  @override
+  Widget build(BuildContext context) {
+    final normalized = (value.clamp(0, 100)) / 100.0;
+    return Container(
+      height: height,
+      decoration: BoxDecoration(
+        color: backgroundColor,
+        borderRadius: BorderRadius.circular(999),
+      ),
+      child: LayoutBuilder(
+        builder: (context, constraints) {
+          return Align(
+            alignment: Alignment.centerLeft,
+            child: Container(
+              height: height,
+              width: constraints.maxWidth * normalized,
+              decoration: BoxDecoration(
+                color: barColor,
+                borderRadius: BorderRadius.circular(999),
+              ),
+            ),
+          );
+        },
       ),
     );
   }
@@ -636,11 +2912,7 @@ class _StudentCommunicationScreenState
             Container(
               decoration: const BoxDecoration(
                 color: Colors.white,
-                border: Border(
-                  bottom: BorderSide(
-                    color: Color(0xFFE2E8F0),
-                  ),
-                ),
+                border: Border(bottom: BorderSide(color: Color(0xFFE2E8F0))),
               ),
               padding: const EdgeInsets.only(
                 left: 24,
@@ -825,10 +3097,7 @@ class _CommTabButton extends StatelessWidget {
                 alignment: Alignment.center,
                 child: Text(
                   '$badgeCount',
-                  style: const TextStyle(
-                    fontSize: 10,
-                    color: Colors.white,
-                  ),
+                  style: const TextStyle(fontSize: 10, color: Colors.white),
                 ),
               ),
             ],
@@ -851,53 +3120,144 @@ class _AnnouncementsSection extends StatefulWidget {
 class _AnnouncementsSectionState extends State<_AnnouncementsSection> {
   String? _expandedId;
 
-  final List<_Announcement> _items = const [
-    _Announcement(
-      id: '1',
-      title: 'Exam Schedule Update',
-      message: 'Mid-term exams will start next Sunday at 9:00 AM...',
-      createdBy: 'Class Servant',
-      createdDate: 'Mar 3',
-      category: 'schedule',
-      unread: true,
-    ),
-    _Announcement(
-      id: '2',
-      title: 'Bible Memory Challenge',
-      message:
-          'This month we are focusing on Psalm 23. Try to memorize the whole chapter!',
-      createdBy: 'Program Coordinator',
-      createdDate: 'Mar 1',
-      category: 'event',
-      unread: false,
-    ),
-  ];
+  bool _isLoading = true;
+  String? _error;
+  final List<_Announcement> _items = [];
+
+  static String _dateOnly(String value) {
+    if (value.length >= 10) return value.substring(0, 10);
+    return value;
+  }
+
+  static String _todayIso() {
+    final now = DateTime.now();
+    final mm = now.month.toString().padLeft(2, '0');
+    final dd = now.day.toString().padLeft(2, '0');
+    return '${now.year}-$mm-$dd';
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    _loadAnnouncementsFromBackend();
+  }
+
+  Future<void> _loadAnnouncementsFromBackend() async {
+    final client = Supabase.instance.client;
+    final userId = client.auth.currentUser?.id;
+    if (userId == null) return;
+
+    setState(() {
+      _isLoading = true;
+      _error = null;
+    });
+
+    try {
+      final profile = await client
+          .from('profiles')
+          .select('grade_id')
+          .eq('id', userId)
+          .maybeSingle();
+
+      final gradeId = (profile as Map?)?['grade_id']?.toString();
+
+      final activeYear = await client
+          .from('academic_years')
+          .select('id')
+          .eq('status', 'active')
+          .maybeSingle();
+      final academicYearId = (activeYear as Map?)?['id']?.toString();
+
+      var query = client
+          .from('announcements')
+          .select(
+            'id, title, message, category, priority, created_by, created_at, expires_on, active, grade_id, academic_year_id',
+          )
+          .eq('active', true);
+
+      if (academicYearId != null && academicYearId.isNotEmpty) {
+        query = query.eq('academic_year_id', academicYearId);
+      }
+
+      if (gradeId != null && gradeId.isNotEmpty) {
+        query = query.or('grade_id.is.null,grade_id.eq.$gradeId');
+      }
+
+      final rows = await query.order('created_at', ascending: false);
+      final items = rows.map((r) {
+        final map = r as Map;
+        final createdAt = map['created_at']?.toString() ?? '';
+        final createdById = map['created_by']?.toString() ?? '';
+        return _Announcement(
+          id: map['id'] as String,
+          title: (map['title'] as String?) ?? '',
+          message: (map['message'] as String?) ?? '',
+          createdBy: createdById == userId ? 'You' : 'Servant',
+          createdDate: createdAt.isNotEmpty
+              ? _dateOnly(createdAt)
+              : _todayIso(),
+          category: (map['category'] as String?) ?? 'general',
+          unread: false,
+        );
+      }).toList();
+
+      if (!mounted) return;
+      setState(() {
+        _items
+          ..clear()
+          ..addAll(items);
+        _expandedId = null;
+        _isLoading = false;
+      });
+    } catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _error = 'Failed to load announcements.';
+        _items.clear();
+        _expandedId = null;
+        _isLoading = false;
+      });
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
+    if (_isLoading) {
+      return const Padding(
+        padding: EdgeInsets.only(top: 24),
+        child: Center(child: CircularProgressIndicator()),
+      );
+    }
+
+    if (_error != null) {
+      return Column(
+        children: [
+          const SizedBox(height: 24),
+          Icon(
+            Icons.error_outline_rounded,
+            size: 42,
+            color: Colors.red.shade300,
+          ),
+          const SizedBox(height: 10),
+          Text(_error!, style: const TextStyle(color: Color(0xFF64748B))),
+        ],
+      );
+    }
+
     if (_items.isEmpty) {
       return Column(
         children: [
           const SizedBox(height: 40),
-          Icon(
-            Icons.campaign_rounded,
-            size: 48,
-            color: Colors.grey.shade300,
-          ),
+          Icon(Icons.campaign_rounded, size: 48, color: Colors.grey.shade300),
           const SizedBox(height: 8),
           const Text(
             'No announcements',
-            style: TextStyle(
-              color: Color(0xFF64748B),
-            ),
+            style: TextStyle(color: Color(0xFF64748B)),
           ),
           const SizedBox(height: 4),
           const Text(
             'Check back later for updates',
-            style: TextStyle(
-              fontSize: 12,
-              color: Color(0xFF94A3B8),
-            ),
+            style: TextStyle(fontSize: 12, color: Color(0xFF94A3B8)),
           ),
         ],
       );
@@ -961,17 +3321,16 @@ class _AnnouncementsSectionState extends State<_AnnouncementsSection> {
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 Padding(
-                  padding:
-                      const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 16,
+                    vertical: 12,
+                  ),
                   child: Row(
                     crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
                       const Padding(
                         padding: EdgeInsets.only(top: 2),
-                        child: Text(
-                          '📢',
-                          style: TextStyle(fontSize: 22),
-                        ),
+                        child: Text('📢', style: TextStyle(fontSize: 22)),
                       ),
                       const SizedBox(width: 10),
                       Expanded(
@@ -1028,7 +3387,9 @@ class _AnnouncementsSectionState extends State<_AnnouncementsSection> {
                                 ),
                                 const SizedBox(width: 8),
                                 Text(
-                                  item.createdDate,
+                                  EthiopianDateFormatter.formatFlexible(
+                                    item.createdDate,
+                                  ),
                                   style: const TextStyle(
                                     fontSize: 11,
                                     color: Color(0xFF94A3B8),
@@ -1055,10 +3416,7 @@ class _AnnouncementsSectionState extends State<_AnnouncementsSection> {
                   ),
                 ),
                 if (expanded)
-                  const Divider(
-                    height: 1,
-                    color: Color(0xFFE2E8F0),
-                  ),
+                  const Divider(height: 1, color: Color(0xFFE2E8F0)),
                 if (expanded)
                   Padding(
                     padding: const EdgeInsets.fromLTRB(16, 10, 16, 14),
@@ -1084,7 +3442,9 @@ class _AnnouncementsSectionState extends State<_AnnouncementsSection> {
                               ),
                             ),
                             Text(
-                              item.createdDate,
+                              EthiopianDateFormatter.formatFlexible(
+                                item.createdDate,
+                              ),
                               style: const TextStyle(
                                 fontSize: 11,
                                 color: Color(0xFF94A3B8),
@@ -1121,7 +3481,8 @@ class _QuestionsList extends StatelessWidget {
       ),
       _Question(
         subject: 'Christian History',
-        question: 'Can you share additional resources about early church fathers?',
+        question:
+            'Can you share additional resources about early church fathers?',
         status: 'Answered',
         answered: true,
         answer:
@@ -1130,10 +3491,8 @@ class _QuestionsList extends StatelessWidget {
       ),
     ];
 
-    final pending =
-        questions.where((q) => !q.answered).toList(growable: false);
-    final answered =
-        questions.where((q) => q.answered).toList(growable: false);
+    final pending = questions.where((q) => !q.answered).toList(growable: false);
+    final answered = questions.where((q) => q.answered).toList(growable: false);
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -1150,20 +3509,14 @@ class _QuestionsList extends StatelessWidget {
               ),
             ),
             icon: const Icon(Icons.add_rounded, size: 20),
-            label: const Text(
-              'Ask a Question',
-              style: TextStyle(fontSize: 14),
-            ),
+            label: const Text('Ask a Question', style: TextStyle(fontSize: 14)),
           ),
         ),
         const SizedBox(height: 16),
         if (pending.isNotEmpty) ...[
           const Text(
             'Pending',
-            style: TextStyle(
-              fontSize: 13,
-              color: Color(0xFF6B7280),
-            ),
+            style: TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
           ),
           const SizedBox(height: 8),
           ...pending.map((q) => _QuestionCard(question: q)),
@@ -1172,10 +3525,7 @@ class _QuestionsList extends StatelessWidget {
         if (answered.isNotEmpty) ...[
           const Text(
             'Answered',
-            style: TextStyle(
-              fontSize: 13,
-              color: Color(0xFF6B7280),
-            ),
+            style: TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
           ),
           const SizedBox(height: 8),
           ...answered.map((q) => _QuestionCard(question: q)),
@@ -1191,9 +3541,7 @@ class _QuestionsList extends StatelessWidget {
           const Text(
             'No questions yet',
             textAlign: TextAlign.center,
-            style: TextStyle(
-              color: Color(0xFF64748B),
-            ),
+            style: TextStyle(color: Color(0xFF64748B)),
           ),
         ],
       ],
@@ -1236,8 +3584,7 @@ class _QuestionCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: const Color(0xFFE0F2FE),
                   borderRadius: BorderRadius.circular(999),
@@ -1251,18 +3598,14 @@ class _QuestionCard extends StatelessWidget {
                 ),
               ),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: statusBg,
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
                   question.status,
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: statusColor,
-                  ),
+                  style: TextStyle(fontSize: 11, color: statusColor),
                 ),
               ),
             ],
@@ -1270,10 +3613,7 @@ class _QuestionCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             question.question,
-            style: const TextStyle(
-              fontSize: 13,
-              color: Color(0xFF111827),
-            ),
+            style: const TextStyle(fontSize: 13, color: Color(0xFF111827)),
           ),
           if (question.answer != null) ...[
             const SizedBox(height: 10),
@@ -1288,10 +3628,7 @@ class _QuestionCard extends StatelessWidget {
                 children: [
                   const Text(
                     'Response:',
-                    style: TextStyle(
-                      fontSize: 11,
-                      color: Color(0xFF0369A1),
-                    ),
+                    style: TextStyle(fontSize: 11, color: Color(0xFF0369A1)),
                   ),
                   const SizedBox(height: 4),
                   Text(
@@ -1307,11 +3644,8 @@ class _QuestionCard extends StatelessWidget {
           ],
           const SizedBox(height: 6),
           Text(
-            question.date,
-            style: const TextStyle(
-              fontSize: 11,
-              color: Color(0xFF9CA3AF),
-            ),
+            EthiopianDateFormatter.formatFlexible(question.date),
+            style: const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
           ),
         ],
       ),
@@ -1368,14 +3702,11 @@ class _QuestionFormState extends State<_QuestionForm> {
                 const SizedBox(height: 16),
                 const Text(
                   'Subject',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Color(0xFF1F2937),
-                  ),
+                  style: TextStyle(fontSize: 13, color: Color(0xFF1F2937)),
                 ),
                 const SizedBox(height: 6),
                 DropdownButtonFormField<String>(
-                  value: _subject.isEmpty ? null : _subject,
+                  initialValue: _subject.isEmpty ? null : _subject,
                   items: const [
                     DropdownMenuItem(
                       value: 'Bible Studies',
@@ -1385,10 +3716,7 @@ class _QuestionFormState extends State<_QuestionForm> {
                       value: 'Christian History',
                       child: Text('Christian History'),
                     ),
-                    DropdownMenuItem(
-                      value: 'General',
-                      child: Text('General'),
-                    ),
+                    DropdownMenuItem(value: 'General', child: Text('General')),
                   ],
                   decoration: _dropdownDecoration,
                   onChanged: (value) {
@@ -1404,10 +3732,7 @@ class _QuestionFormState extends State<_QuestionForm> {
                 const SizedBox(height: 16),
                 const Text(
                   'Your Question',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Color(0xFF1F2937),
-                  ),
+                  style: TextStyle(fontSize: 13, color: Color(0xFF1F2937)),
                 ),
                 const SizedBox(height: 6),
                 TextFormField(
@@ -1443,13 +3768,16 @@ class _QuestionFormState extends State<_QuestionForm> {
                           setState(() {
                             _showSuccess = true;
                           });
-                          Future.delayed(const Duration(milliseconds: 1500), () {
-                            if (!mounted) return;
-                            setState(() {
-                              _showSuccess = false;
-                            });
-                            widget.onCancel();
-                          });
+                          Future.delayed(
+                            const Duration(milliseconds: 1500),
+                            () {
+                              if (!mounted) return;
+                              setState(() {
+                                _showSuccess = false;
+                              });
+                              widget.onCancel();
+                            },
+                          );
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF0EA5E9),
@@ -1485,8 +3813,10 @@ class _QuestionFormState extends State<_QuestionForm> {
             Padding(
               padding: const EdgeInsets.only(top: 12),
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFF22C55E),
                   borderRadius: BorderRadius.circular(999),
@@ -1502,10 +3832,7 @@ class _QuestionFormState extends State<_QuestionForm> {
                     SizedBox(width: 6),
                     Text(
                       'Question submitted!',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.white,
-                      ),
+                      style: TextStyle(fontSize: 12, color: Colors.white),
                     ),
                   ],
                 ),
@@ -1568,7 +3895,8 @@ class _ComplaintsList extends StatelessWidget {
             textAlign: TextAlign.center,
             style: TextStyle(color: Color(0xFF64748B)),
           ),
-        ] else ...complaints.map((c) => _ComplaintCard(complaint: c)),
+        ] else
+          ...complaints.map((c) => _ComplaintCard(complaint: c)),
       ],
     );
   }
@@ -1618,8 +3946,7 @@ class _ComplaintCard extends StatelessWidget {
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: const Color(0xFFE2E8F0),
                   borderRadius: BorderRadius.circular(999),
@@ -1633,18 +3960,14 @@ class _ComplaintCard extends StatelessWidget {
                 ),
               ),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 decoration: BoxDecoration(
                   color: statusBg,
                   borderRadius: BorderRadius.circular(999),
                 ),
                 child: Text(
                   complaint.status,
-                  style: TextStyle(
-                    fontSize: 11,
-                    color: statusColor,
-                  ),
+                  style: TextStyle(fontSize: 11, color: statusColor),
                 ),
               ),
             ],
@@ -1652,18 +3975,12 @@ class _ComplaintCard extends StatelessWidget {
           const SizedBox(height: 8),
           Text(
             complaint.text,
-            style: const TextStyle(
-              fontSize: 13,
-              color: Color(0xFF0F172A),
-            ),
+            style: const TextStyle(fontSize: 13, color: Color(0xFF0F172A)),
           ),
           const SizedBox(height: 6),
           Text(
-            complaint.date,
-            style: const TextStyle(
-              fontSize: 11,
-              color: Color(0xFF9CA3AF),
-            ),
+            EthiopianDateFormatter.formatFlexible(complaint.date),
+            style: const TextStyle(fontSize: 11, color: Color(0xFF9CA3AF)),
           ),
         ],
       ),
@@ -1722,35 +4039,23 @@ class _ComplaintFormState extends State<_ComplaintForm> {
                 const SizedBox(height: 16),
                 const Text(
                   'Category',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Color(0xFF1F2937),
-                  ),
+                  style: TextStyle(fontSize: 13, color: Color(0xFF1F2937)),
                 ),
                 const SizedBox(height: 6),
                 DropdownButtonFormField<String>(
-                  value: _category.isEmpty ? null : _category,
+                  initialValue: _category.isEmpty ? null : _category,
                   items: const [
-                    DropdownMenuItem(
-                      value: 'teacher',
-                      child: Text('Teacher'),
-                    ),
+                    DropdownMenuItem(value: 'teacher', child: Text('Teacher')),
                     DropdownMenuItem(
                       value: 'facility',
                       child: Text('Facility'),
                     ),
-                    DropdownMenuItem(
-                      value: 'course',
-                      child: Text('Course'),
-                    ),
+                    DropdownMenuItem(value: 'course', child: Text('Course')),
                     DropdownMenuItem(
                       value: 'administrative',
                       child: Text('Administrative'),
                     ),
-                    DropdownMenuItem(
-                      value: 'other',
-                      child: Text('Other'),
-                    ),
+                    DropdownMenuItem(value: 'other', child: Text('Other')),
                   ],
                   decoration: _dropdownDecoration,
                   onChanged: (value) {
@@ -1766,10 +4071,7 @@ class _ComplaintFormState extends State<_ComplaintForm> {
                 const SizedBox(height: 16),
                 const Text(
                   'Title',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Color(0xFF1F2937),
-                  ),
+                  style: TextStyle(fontSize: 13, color: Color(0xFF1F2937)),
                 ),
                 const SizedBox(height: 6),
                 TextFormField(
@@ -1795,10 +4097,7 @@ class _ComplaintFormState extends State<_ComplaintForm> {
                 const SizedBox(height: 8),
                 const Text(
                   'Description',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Color(0xFF1F2937),
-                  ),
+                  style: TextStyle(fontSize: 13, color: Color(0xFF1F2937)),
                 ),
                 const SizedBox(height: 6),
                 TextFormField(
@@ -1851,11 +4150,14 @@ class _ComplaintFormState extends State<_ComplaintForm> {
                         onPressed: () {
                           if (!_formKey.currentState!.validate()) return;
                           setState(() => _showSuccess = true);
-                          Future.delayed(const Duration(milliseconds: 1500), () {
-                            if (!mounted) return;
-                            setState(() => _showSuccess = false);
-                            widget.onCancel();
-                          });
+                          Future.delayed(
+                            const Duration(milliseconds: 1500),
+                            () {
+                              if (!mounted) return;
+                              setState(() => _showSuccess = false);
+                              widget.onCancel();
+                            },
+                          );
                         },
                         style: ElevatedButton.styleFrom(
                           backgroundColor: const Color(0xFF0EA5E9),
@@ -1891,8 +4193,10 @@ class _ComplaintFormState extends State<_ComplaintForm> {
             Padding(
               padding: const EdgeInsets.only(top: 12),
               child: Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 10,
+                ),
                 decoration: BoxDecoration(
                   color: const Color(0xFF22C55E),
                   borderRadius: BorderRadius.circular(999),
@@ -1908,10 +4212,7 @@ class _ComplaintFormState extends State<_ComplaintForm> {
                     SizedBox(width: 6),
                     Text(
                       'Complaint submitted!',
-                      style: TextStyle(
-                        fontSize: 12,
-                        color: Colors.white,
-                      ),
+                      style: TextStyle(fontSize: 12, color: Colors.white),
                     ),
                   ],
                 ),
@@ -1968,10 +4269,7 @@ class _FeedbackSection extends StatelessWidget {
               const SizedBox(height: 6),
               const Text(
                 'Your servant may share feedback forms in the future. Check back later.',
-                style: TextStyle(
-                  fontSize: 13,
-                  color: Color(0xFF64748B),
-                ),
+                style: TextStyle(fontSize: 13, color: Color(0xFF64748B)),
               ),
             ],
           ),
@@ -1999,9 +4297,7 @@ const _inputDecoration = InputDecoration(
   ),
 );
 
-final _textareaDecoration = _inputDecoration.copyWith(
-  alignLabelWithHint: true,
-);
+final _textareaDecoration = _inputDecoration.copyWith(alignLabelWithHint: true);
 
 const _dropdownDecoration = _inputDecoration;
 
@@ -2056,8 +4352,10 @@ class _SubjectGradeTile extends StatelessWidget {
                 ),
               ),
               Container(
-                padding:
-                    const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 12,
+                  vertical: 6,
+                ),
                 decoration: BoxDecoration(
                   color: gradeBg(subject.average),
                   borderRadius: BorderRadius.circular(16),
@@ -2111,17 +4409,11 @@ class _SummaryRow extends StatelessWidget {
       children: [
         Text(
           label,
-          style: const TextStyle(
-            fontSize: 13,
-            color: Color(0xFF6B7280),
-          ),
+          style: const TextStyle(fontSize: 13, color: Color(0xFF6B7280)),
         ),
         Text(
           value,
-          style: const TextStyle(
-            fontSize: 13,
-            color: Color(0xFF0F172A),
-          ),
+          style: const TextStyle(fontSize: 13, color: Color(0xFF0F172A)),
         ),
       ],
     );
@@ -2185,11 +4477,6 @@ class StudentProfileScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      body: Center(
-        child: Text('Student Profile'),
-      ),
-    );
+    return const Scaffold(body: Center(child: Text('Student Profile')));
   }
 }
-

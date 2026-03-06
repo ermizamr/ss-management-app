@@ -13,7 +13,7 @@ void main() {
     await tester.pumpWidget(const SundaySchoolApp());
 
     expect(find.text('Sunday School'), findsOneWidget);
-    expect(find.text('I am a Student'), findsOneWidget);
-    expect(find.text('I am a Servant'), findsOneWidget);
+    expect(find.text('Student'), findsOneWidget);
+    expect(find.text('Servant'), findsOneWidget);
   });
 }

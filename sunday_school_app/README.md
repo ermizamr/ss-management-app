@@ -16,12 +16,7 @@ The default start screen is the role selection page with **Student** and **Serva
 
 ## Supabase configuration
 
-The app is configured to talk to your Supabase project using:
-
-- `SUPABASE_URL=https://jchmduashaoeueugzuss.supabase.co`
-- `SUPABASE_ANON_KEY=...` (defined in `lib/core/config/supabase_config.dart`)
-
-For production, consider moving these values to a more secure configuration mechanism.
+Supabase URL and anon key are currently hardcoded in `lib/core/config/supabase_config.dart` for simplicity.
 
 ## Architecture overview
 
